@@ -16,6 +16,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure btn_okClick(Sender: TObject);
     procedure btn_closeClick(Sender: TObject);
+    procedure FormKeyPress(Sender: TObject; var Key: Char);
   private
     { Private declarations }
   public
@@ -75,6 +76,11 @@ end;
 procedure TInfluencesList.btn_closeClick(Sender: TObject);
 begin
   self.close();
+end;
+
+procedure TInfluencesList.FormKeyPress(Sender: TObject; var Key: Char);
+begin
+  if Key = chr(27) then Close;
 end;
 
 end.

@@ -13,13 +13,6 @@ type
     Label2: TLabel;
     Label3: TLabel;
     Label4: TLabel;
-    Label5: TLabel;
-    Edit1: TEdit;
-    Label6: TLabel;
-    Label7: TLabel;
-    Edit2: TEdit;
-    Label8: TLabel;
-    Edit3: TEdit;
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormHide(Sender: TObject);

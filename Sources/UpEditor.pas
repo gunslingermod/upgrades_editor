@@ -60,6 +60,7 @@ type
     procedure btn_stringeditorClick(Sender: TObject);
     procedure edit_valueChange(Sender: TObject);
     procedure edit_costKeyPress(Sender: TObject; var Key: Char);
+    procedure FormKeyPress(Sender: TObject; var Key: Char);
   private
     { Private declarations }
     _selector:TTextureSelectorForm;
@@ -249,6 +250,11 @@ begin
     Key:=chr(0);
   end;
 
+end;
+
+procedure TUpgradeEditor.FormKeyPress(Sender: TObject; var Key: Char);
+begin
+  if Key = chr(27) then Close;
 end;
 
 end.

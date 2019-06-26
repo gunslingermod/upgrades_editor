@@ -83,6 +83,7 @@ public
   function EffectsCnt():integer;
   function ElementsCnt():integer;  
   function GetEffect(index:integer):TUpgradeGroup;
+  function GetElement(index:integer):TUpgrade;
   function GetName():string;
   procedure SetName(n:string);
   function GetEffectsString(wpn:string):string;
@@ -92,6 +93,40 @@ public
 
   procedure Save(str:TStream);
   procedure Load(str:TStream);  
+end;
+
+TMinMaxInfluencePair = class
+private
+  _name:string;
+  _max_increase:single;
+  _max_decrease:single;
+public
+  constructor Create(name:string; delta:single); overload;
+  constructor Create(p:TMinMaxInfluencePair); overload;
+
+  destructor Destroy; override;
+
+  procedure DoSum(p:TMinMaxInfluencePair);
+  procedure DoUnion(p:TMinMaxInfluencePair);
+  function GetUpperDelta():single;
+  function GetLowDelta():single;
+  function GetName():string;
+end;
+
+TMinMaxInfluenceContainer = class
+private
+  _accumulator:array of TMinMaxInfluencePair;
+  _tmp_influences:array of TMinMaxInfluencePair;
+
+  procedure _ResetTmpInf();
+
+public
+  constructor Create;
+  destructor Destroy; override;
+
+  procedure RegisterInfluenceVariantInTmpBuf(name:string; value:single);
+  procedure AccumulateTmpBuf();
+  function ReportInfo():TStringList;
 end;
 
 implementation
@@ -475,4 +510,163 @@ begin
   result:=length(_elements);
 end;
 
+function TUpgradeGroup.GetElement(index: integer): TUpgrade;
+begin
+  if (index<0) or (index>=length(_elements)) then begin
+    result:=nil;
+    exit;
+  end;
+  result:=_elements[index];
+end;
+
+{ TMinMaxInfluencePair }
+
+constructor TMinMaxInfluencePair.Create(name: string; delta: single);
+begin
+  _name:=name;
+  if delta > 0 then begin
+    _max_increase:=delta;
+    _max_decrease:=0;
+  end else begin
+    _max_decrease:=delta;
+    _max_increase:=0;
+  end;
+end;
+
+constructor TMinMaxInfluencePair.Create(p: TMinMaxInfluencePair);
+begin
+  _name:=p._name;
+  _max_increase:=p._max_increase;
+  _max_decrease:=p._max_decrease;
+end;
+
+destructor TMinMaxInfluencePair.Destroy;
+begin
+  inherited;
+end;
+
+procedure TMinMaxInfluencePair.DoSum(p: TMinMaxInfluencePair);
+begin
+  assert(_name = p._name);
+  _max_increase:=_max_increase+p._max_increase;
+  _max_decrease:=_max_decrease+p._max_decrease;
+end;
+
+procedure TMinMaxInfluencePair.DoUnion(p: TMinMaxInfluencePair);
+begin
+  assert(_name = p._name);
+  if _max_increase < p._max_increase then _max_increase:=p._max_increase;
+  if _max_decrease > p._max_decrease then _max_decrease:=p._max_decrease;
+end;
+
+function TMinMaxInfluencePair.GetLowDelta: single;
+begin
+  result:=_max_decrease;
+end;
+
+function TMinMaxInfluencePair.GetName: string;
+begin
+  result:=_name;
+end;
+
+function TMinMaxInfluencePair.GetUpperDelta: single;
+begin
+  result:=_max_increase;
+end;
+
+{ TMinMaxInfluenceContainer }
+
+constructor TMinMaxInfluenceContainer.Create;
+begin
+  setlength(_accumulator, 0);
+  setlength(_tmp_influences, 0);
+end;
+
+destructor TMinMaxInfluenceContainer.Destroy;
+var
+  i:integer;
+begin
+  _ResetTmpInf();
+  for i:=0 to length(_accumulator)-1 do begin
+    _accumulator[i].Free();
+  end;
+  setlength(_accumulator, 0);
+  inherited;
+end;
+
+procedure TMinMaxInfluenceContainer.AccumulateTmpBuf;
+var
+  i,j:integer;
+  already_accumulated:boolean;
+begin
+  for i:=0 to length(_tmp_influences)-1 do begin
+    already_accumulated:=false;
+    for j:=0 to length(_accumulator)-1 do begin
+      if _tmp_influences[i].GetName() = _accumulator[j].GetName() then begin
+        _accumulator[j].DoSum(_tmp_influences[i]);
+        already_accumulated:=true;
+        break;
+      end;
+    end;
+    
+    if not already_accumulated then begin
+      j:=length(_accumulator);
+      setlength(_accumulator, j+1);
+      _accumulator[j]:=_tmp_influences[i];
+      _tmp_influences[i]:=nil;
+    end;
+  end;
+
+  _ResetTmpInf();
+end;
+
+procedure TMinMaxInfluenceContainer.RegisterInfluenceVariantInTmpBuf(name: string; value: single);
+var
+  i:integer;
+  pair:TMinMaxInfluencePair;
+begin
+  if value = 0 then exit;
+  pair:=TMinMaxInfluencePair.Create(name, value);
+
+  for i:=0 to length(_tmp_influences)-1 do begin
+    if _tmp_influences[i].GetName() = name then begin
+      _tmp_influences[i].DoUnion(pair);
+      value:=0;
+      break;
+    end;
+  end;
+
+  if value <> 0 then begin
+    i:=length(_tmp_influences);
+    setlength(_tmp_influences, i+1);
+    _tmp_influences[i]:=pair;
+  end else begin
+    pair.Free();
+  end;
+end;
+
+procedure TMinMaxInfluenceContainer._ResetTmpInf;
+var
+  i:integer;
+begin
+  for i:=0 to length(_tmp_influences)-1 do begin
+    _tmp_influences[i].Free();
+  end;
+  setlength(_tmp_influences, 0);
+end;
+
+function TMinMaxInfluenceContainer.ReportInfo: TStringList;
+var
+  i:integer;
+  format_settings:TFormatSettings;
+begin
+  result:=TStringList.Create();
+  format_settings.DecimalSeparator:='.';
+  format_settings.ThousandSeparator:= ' ';  
+  for i:=0 to length(_accumulator)-1 do begin
+    result.Add(_accumulator[i]._name+' = ['+floattostrf(_accumulator[i]._max_decrease, ffFixed, 8, 4, format_settings)+', +'+floattostrf(_accumulator[i]._max_increase, ffFixed, 6, 4, format_settings)+']');
+  end;
+end;
+
 end.
+

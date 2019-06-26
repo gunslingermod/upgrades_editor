@@ -207,6 +207,9 @@ procedure TTextureSelectorForm.FormKeyPress(Sender: TObject;
   var Key: Char);
 begin
   if _ispicking then exit;
+
+  if Key = chr(27) then Close;
+
   Key:=AnsiLowerCase(key)[1];
   case Key of
     'g': _rect.Top:=_rect.Top+1;

@@ -5,7 +5,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, ExtCtrls, jpeg, Buttons, Upgrade, UpEditor, math,
-  Menus, ActnList, helper, AboutForm, FileCtrl, texture_loader, strutils, registry, shlobj, dds_utils, helpform;
+  Menus, ActnList, helper, AboutForm, FileCtrl, texture_loader, strutils, registry, shlobj, dds_utils, helpform, ClipBrd;
 
 type
   TMainForm = class(TForm)
@@ -83,6 +83,7 @@ type
     rec41: TMenuItem;
     Clearprogramsregistrysettings1: TMenuItem;
     Help2: TMenuItem;
+    Calculatetreasures1: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btn_apply_wpn_iconClick(Sender: TObject);
@@ -129,6 +130,7 @@ type
     procedure rec41Click(Sender: TObject);
     procedure Clearprogramsregistrysettings1Click(Sender: TObject);
     procedure Help2Click(Sender: TObject);
+    procedure Calculatetreasures1Click(Sender: TObject);
 
   private
     { Private declarations }
@@ -162,6 +164,10 @@ type
     procedure _DumpScheme(str, str16:TFileStream);
     procedure _DumpWeaponLTX(str:TFileStream);
     function _Validate():string;
+
+    function _AdjustTreasureForUpgradesGroup(group:TUpgradeGroup; keyvalue: TMinMaxInfluenceContainer):boolean;
+    function _RecurseTreasureCalc(root_group:TUpgradeGroup; keyvalue: TMinMaxInfluenceContainer):boolean;
+    function _CalculateTreasures(keyvalue:TMinMaxInfluenceContainer):boolean;
 
     procedure _SaveProject(fname:string);
     procedure _LoadProject(fname:string);
@@ -221,7 +227,7 @@ const
 
 const
   reg_key:string='STCOPGUE1.x';
-  appname:string='Gunslinger'+chr(39)+'s Upgrades Editor 1.01';
+  appname:string='Gunslinger'+chr(39)+'s Upgrades Editor 1.02';
 
 implementation
 
@@ -1722,6 +1728,136 @@ end;
 procedure TMainForm.Help2Click(Sender: TObject);
 begin
   _help_form.Show();
+end;
+
+procedure TMainForm.Calculatetreasures1Click(Sender: TObject);
+var
+  tmpstr:string;
+  keyvalue:TMinMaxInfluenceContainer;
+  res:TStringList;
+begin
+  tmpstr:=_Validate();
+  if tmpstr<>'' then begin
+    MessageBox(self.Handle, PChar(tmpstr), 'Validation failed!', MB_OK+MB_ICONERROR);
+    exit;
+  end;
+
+
+  keyvalue:=TMinMaxInfluenceContainer.Create();
+  try
+    if _CalculateTreasures(keyvalue) then begin
+      res:=keyvalue.ReportInfo();
+      if MessageBox(self.Handle, res.GetText(), 'Press OK to copy to clipboard', MB_OKCANCEL) = ID_OK then begin
+        Clipboard.AsText:=res.GetText();
+      end;
+    end else begin
+      MessageBox(self.Handle, 'Can''t calculate, please double-check all your upgrades', 'Error', MB_OK or MB_ICONERROR);
+    end;
+  finally
+    keyvalue.Free();
+    res.Free();
+  end;    
+end;
+
+
+function TMainForm._AdjustTreasureForUpgradesGroup(group: TUpgradeGroup; keyvalue: TMinMaxInfluenceContainer): boolean;
+var
+  i,j:integer;
+  group_treasures, upgrade_values:TStringList;
+  up:TUpgrade;
+  tmpstr, key, value:string;
+  value_f:single;
+  p:integer;
+  format_settings:TFormatSettings;
+begin
+  result:=true;
+  group_treasures:=TStringList.Create();
+  upgrade_values:=TStringList.Create();
+  format_settings.DecimalSeparator:='.';
+  format_settings.ThousandSeparator:= ' ';
+  try
+    for i:=0 to group.ElementsCnt()-1 do begin
+      up:=group.GetElement(i);
+      if length(up.inherited_section) > 0 then begin
+        //TODO: draw memo for manual input?
+        MessageBox(self.Handle, PChar('Upgrade "'+up.name+'" inherits section(s) "'+up.inherited_section+'". Please apply values from the specified section(s) manually.'), 'Information', MB_OK or MB_ICONINFORMATION);
+      end;
+
+      //Parse all influences' strings to temp stringlist
+      upgrade_values.Clear();
+      for j:=0 to up.section_params.Count-1 do begin
+        tmpstr:=Trim(up.section_params[j]);
+
+        //Remove comments
+        p:=pos(';', tmpstr);
+        if p>0 then begin
+          tmpstr:=midstr(tmpstr, 1, p-1)
+        end;
+
+        //check for key-value separator
+        p:=pos('=', tmpstr);
+        if p=0 then continue;
+        key:=lowercase(trim(midstr(tmpstr, 1, p-1)));
+        value:=trim(midstr(tmpstr, p+1, length(tmpstr)));
+
+        //Collect to temp parameters list
+        upgrade_values.Values[key]:=value;
+      end;
+
+      //Apply parsed values from stringlist to container
+      for j:=0 to upgrade_values.Count-1 do begin
+        tmpstr:=upgrade_values.Names[j];
+        value_f:=strtofloatdef(upgrade_values.Values[tmpstr], 0, format_settings);
+        if value_f <> 0 then begin
+          keyvalue.RegisterInfluenceVariantInTmpBuf(tmpstr, value_f);
+        end;
+      end;
+    end;
+
+    keyvalue.AccumulateTmpBuf();    
+  finally
+    upgrade_values.Free();  
+    group_treasures.Free();
+  end;
+end;
+
+function TMainForm._RecurseTreasureCalc(root_group:TUpgradeGroup; keyvalue: TMinMaxInfluenceContainer):boolean;
+var
+  i:integer;
+
+begin
+  result:=_AdjustTreasureForUpgradesGroup(root_group, keyvalue);
+
+  for i:=0 to root_group.EffectsCnt()-1 do begin
+    if result then result := _RecurseTreasureCalc(root_group.GetEffect(i), keyvalue);
+  end;
+end;
+
+function TMainForm._CalculateTreasures(keyvalue: TMinMaxInfluenceContainer): boolean;
+var
+  i, j, k:integer;
+  is_root:boolean;
+begin
+  result:=true;
+
+  //Iterate over all groups, find root groups (without parents) and calc
+  for i:=0 to length(_groups)-1 do begin
+    is_root:=true;
+    for j:=0 to length(_groups)-1 do begin
+      for k:=0 to _groups[j].EffectsCnt()-1 do begin
+        if _groups[i] = _groups[j].GetEffect(k) then begin
+          is_root:=false;
+          break;
+        end;
+      end;
+
+      if not is_root then break;
+    end;
+
+    if is_root then begin
+      result:=_RecurseTreasureCalc(_groups[i], keyvalue);
+    end;      
+  end;
 end;
 
 end.

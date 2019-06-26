@@ -18,6 +18,7 @@ type
     procedure btn_cancelClick(Sender: TObject);
     procedure btn_addClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure FormKeyPress(Sender: TObject; var Key: Char);
   private
     { Private declarations }
     _target:TStrings;
@@ -86,6 +87,11 @@ begin
     if self.Top<0 then self.Top:=0;
     if self.Left<0 then self.Left:=0;
   end;
+end;
+
+procedure TTextInputForm.FormKeyPress(Sender: TObject; var Key: Char);
+begin
+  if Key = chr(27) then Close;
 end;
 
 end.
