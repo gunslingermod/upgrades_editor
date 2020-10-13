@@ -1772,6 +1772,10 @@ var
   lines_parsed:integer;
 begin
   result:=true;
+  if keyvalue.IsGroupAlreadyParsed(group.GetName()) then begin
+    exit;
+  end;
+
   group_treasures:=TStringList.Create();
   upgrade_values:=TStringList.Create();
   format_settings.DecimalSeparator:='.';
@@ -1821,7 +1825,7 @@ begin
       end;
     end;
 
-    keyvalue.AccumulateTmpBuf();    
+    keyvalue.AccumulateTmpBuf(group.GetName());
   finally
     upgrade_values.Free();  
     group_treasures.Free();

@@ -115,6 +115,7 @@ end;
 
 TMinMaxInfluenceContainer = class
 private
+  _parsed_groups:TStringList;
   _accumulator:array of TMinMaxInfluencePair;
   _tmp_influences:array of TMinMaxInfluencePair;
 
@@ -125,8 +126,10 @@ public
   destructor Destroy; override;
 
   procedure RegisterInfluenceVariantInTmpBuf(name:string; value:single);
-  procedure AccumulateTmpBuf();
+  procedure AccumulateTmpBuf(group_name:string);
   function ReportInfo():TStringList;
+  procedure RegistedParsedGroup(name:string);
+  function IsGroupAlreadyParsed(name:string):boolean;
 end;
 
 implementation
@@ -580,6 +583,7 @@ constructor TMinMaxInfluenceContainer.Create;
 begin
   setlength(_accumulator, 0);
   setlength(_tmp_influences, 0);
+  _parsed_groups:=TStringList.Create();
 end;
 
 destructor TMinMaxInfluenceContainer.Destroy;
@@ -587,6 +591,7 @@ var
   i:integer;
 begin
   _ResetTmpInf();
+  FreeAndNil(_parsed_groups);
   for i:=0 to length(_accumulator)-1 do begin
     _accumulator[i].Free();
   end;
@@ -594,7 +599,7 @@ begin
   inherited;
 end;
 
-procedure TMinMaxInfluenceContainer.AccumulateTmpBuf;
+procedure TMinMaxInfluenceContainer.AccumulateTmpBuf(group_name:string);
 var
   i,j:integer;
   already_accumulated:boolean;
@@ -618,6 +623,10 @@ begin
   end;
 
   _ResetTmpInf();
+
+  if length(group_name) > 0 then begin
+    RegistedParsedGroup(group_name);
+  end;
 end;
 
 procedure TMinMaxInfluenceContainer.RegisterInfluenceVariantInTmpBuf(name: string; value: single);
@@ -665,6 +674,18 @@ begin
   format_settings.ThousandSeparator:= ' ';  
   for i:=0 to length(_accumulator)-1 do begin
     result.Add(_accumulator[i]._name+' = ['+floattostrf(_accumulator[i]._max_decrease, ffFixed, 8, 4, format_settings)+', +'+floattostrf(_accumulator[i]._max_increase, ffFixed, 6, 4, format_settings)+']');
+  end;
+end;
+
+function TMinMaxInfluenceContainer.IsGroupAlreadyParsed(name: string): boolean;
+begin
+  result:=(_parsed_groups.IndexOf(name) >= 0);
+end;
+
+procedure TMinMaxInfluenceContainer.RegistedParsedGroup(name: string);
+begin
+  if not IsGroupAlreadyParsed(name) then begin
+    _parsed_groups.Append(name);
   end;
 end;
 
