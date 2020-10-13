@@ -675,6 +675,7 @@ begin
   for i:=0 to length(_accumulator)-1 do begin
     result.Add(_accumulator[i]._name+' = ['+floattostrf(_accumulator[i]._max_decrease, ffFixed, 8, 4, format_settings)+', +'+floattostrf(_accumulator[i]._max_increase, ffFixed, 6, 4, format_settings)+']');
   end;
+  result.Sort();
 end;
 
 function TMinMaxInfluenceContainer.IsGroupAlreadyParsed(name: string): boolean;
