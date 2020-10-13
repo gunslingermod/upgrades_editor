@@ -227,7 +227,7 @@ const
 
 const
   reg_key:string='STCOPGUE1.x';
-  appname:string='Gunslinger'+chr(39)+'s Upgrades Editor 1.02';
+  appname:string='Gunslinger'+chr(39)+'s Upgrades Editor 1.03';
 
 implementation
 
@@ -1769,6 +1769,7 @@ var
   value_f:single;
   p:integer;
   format_settings:TFormatSettings;
+  lines_parsed:integer;
 begin
   result:=true;
   group_treasures:=TStringList.Create();
@@ -1785,6 +1786,7 @@ begin
 
       //Parse all influences' strings to temp stringlist
       upgrade_values.Clear();
+      lines_parsed:=0;
       for j:=0 to up.section_params.Count-1 do begin
         tmpstr:=Trim(up.section_params[j]);
 
@@ -1802,6 +1804,11 @@ begin
 
         //Collect to temp parameters list
         upgrade_values.Values[key]:=value;
+        lines_parsed:=lines_parsed+1;
+      end;
+
+      if lines_parsed = 0 then begin
+        MessageBox(self.Handle, PChar('Upgrade "'+up.name+'" has no influences'), 'Warning', MB_OK or MB_ICONWARNING);
       end;
 
       //Apply parsed values from stringlist to container
