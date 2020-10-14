@@ -84,6 +84,7 @@ type
     Clearprogramsregistrysettings1: TMenuItem;
     Help2: TMenuItem;
     Calculatetreasures1: TMenuItem;
+    Searchparam: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btn_apply_wpn_iconClick(Sender: TObject);
@@ -131,6 +132,7 @@ type
     procedure Clearprogramsregistrysettings1Click(Sender: TObject);
     procedure Help2Click(Sender: TObject);
     procedure Calculatetreasures1Click(Sender: TObject);
+    procedure SearchparamClick(Sender: TObject);
 
   private
     { Private declarations }
@@ -168,6 +170,7 @@ type
     function _AdjustTreasureForUpgradesGroup(group:TUpgradeGroup; keyvalue: TMinMaxInfluenceContainer):boolean;
     function _RecurseTreasureCalc(root_group:TUpgradeGroup; keyvalue: TMinMaxInfluenceContainer):boolean;
     function _CalculateTreasures(keyvalue:TMinMaxInfluenceContainer):boolean;
+    function _SearchParameterInUpgrades(param_name:string):TStringList;
 
     procedure _SaveProject(fname:string);
     procedure _LoadProject(fname:string);
@@ -1868,6 +1871,50 @@ begin
     if is_root then begin
       result:=_RecurseTreasureCalc(_groups[i], keyvalue);
     end;      
+  end;
+end;
+
+function TMainForm._SearchParameterInUpgrades(param_name: string): TStringList;
+var
+  i,j:integer;
+  line:string;
+begin
+  result:=TStringList.Create();
+  for i:=0 to length(_upgrades)-1 do begin
+    for j:=0 to _upgrades[i].section_params.Count-1 do begin
+      line:= trim(_upgrades[i].section_params[j]);
+      if pos(lowercase(param_name), lowercase(line)) > 0 then begin
+        result.Add('{'+_upgrades[i].name+'}'+': '+line);
+      end;
+    end;
+  end;
+end;
+
+procedure TMainForm.SearchparamClick(Sender: TObject);
+var
+  param, res:string;
+  r:TStringList;
+  i:integer;
+begin
+  param:=inputbox('', 'Enter parameter name:', '');
+  if length(param) > 0 then begin
+    try
+      r:=_SearchParameterInUpgrades(param);
+      if r.Count > 0 then begin
+        res:='Search results for "'+param+'":'+chr($0d)+chr($0a)+chr($0d)+chr($0a);
+        for i:=0 to r.Count-1 do begin
+          res:=res+r[i]+chr($0d)+chr($0a);
+        end;
+      end else begin
+        res:='"'+param+'" not found';
+      end;
+
+      if MessageBox(self.Handle, PAnsiChar(res), 'Press OK to copy to clipboard', MB_OKCANCEL) = ID_OK then begin
+        Clipboard.AsText:=res;
+      end;
+    finally
+      r.Free;
+    end;
   end;
 end;
 

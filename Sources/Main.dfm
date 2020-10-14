@@ -2214,6 +2214,10 @@ object MainForm: TMainForm
         Caption = 'Calculate treasures'
         OnClick = Calculatetreasures1Click
       end
+      object Searchparam: TMenuItem
+        Caption = 'Find parameter...'
+        OnClick = SearchparamClick
+      end
     end
     object Help1: TMenuItem
       Caption = 'Help'
