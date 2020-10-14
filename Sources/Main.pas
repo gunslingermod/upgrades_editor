@@ -1523,7 +1523,7 @@ begin
       reg.CloseKey;
 
       reg.OpenKey(reg_key, true);
-      reg.WriteString('', 'Guslinger'+chr(39)+'s Upgrades Project');
+      reg.WriteString('', 'Gunslinger'+chr(39)+'s Upgrades Project');
       reg.CloseKey;
 
       reg.OpenKey(reg_key+'\DefaultIcon', true);
