@@ -70,11 +70,14 @@ type
     _param_list:TInfluencesList;
 
     _last_val:string;
+    _max_x:integer;
+    _max_y:integer;
 
     procedure _UpdateVis();
   public
     procedure SetBaseTexture(tex:TPicture);
     procedure SetUpgrade(up:TUpgrade);
+    procedure SetUpgradePositionLimits(x:integer; y:integer);
     procedure UpdatePreview();
     { Public declarations }
   end;
@@ -97,6 +100,8 @@ begin
   _selector:=TTextureSelectorForm.Create(self);
   _editor:=TTextInputForm.Create(self);
   _param_list:=TInfluencesList.Create(_editor);
+  _max_x:=0;
+  _max_y:=0;  
 end;
 
 procedure TUpgradeEditor.FormDestroy(Sender: TObject);
@@ -168,6 +173,21 @@ begin
   _up.up_prop:=combo_property.Text;
   _up.coords.X:=strtointdef(edit_sch_x.Text, _up.coords.X);
   _up.coords.Y:=strtointdef(edit_sch_y.Text, _up.coords.Y);
+
+  if _up.coords.X > _max_x then begin
+    _up.coords.X:=_max_x;
+  end;
+  if _up.coords.Y > _max_y then begin
+    _up.coords.Y:=_max_y;
+  end;
+
+  if _up.coords.X < 0 then begin
+    _up.coords.X:=0;
+  end;
+  if _up.coords.Y < 0 then begin
+    _up.coords.Y:=0
+  end;
+
   _up.point.X:=strtointdef(edit_point_x.Text, _up.point.X);
   _up.point.Y:=strtointdef(edit_point_y.Text, _up.point.Y);
 
@@ -229,10 +249,14 @@ begin
 end;
 
 procedure TUpgradeEditor.edit_valueChange(Sender: TObject);
+var
+  fs:TFormatSettings;
 begin
   try
     if (trim(edit_value.Text)<>'') then
-      strtofloat(edit_value.Text+'0');
+      GetLocaleFormatSettings(LOCALE_SYSTEM_DEFAULT, fs);
+      fs.DecimalSeparator := '.';
+      strtofloat(edit_value.Text+'0', fs);
     _last_val:=edit_value.Text;
   except
     on E:EConvertError do
@@ -255,6 +279,12 @@ end;
 procedure TUpgradeEditor.FormKeyPress(Sender: TObject; var Key: Char);
 begin
   if Key = chr(27) then Close;
+end;
+
+procedure TUpgradeEditor.SetUpgradePositionLimits(x, y: integer);
+begin
+  _max_x:=x;
+  _max_y:=y;
 end;
 
 end.

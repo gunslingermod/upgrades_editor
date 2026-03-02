@@ -2210,9 +2210,9 @@ object MainForm: TMainForm
         Caption = 'Clear program'#39's registry settings'
         OnClick = Clearprogramsregistrysettings1Click
       end
-      object Calculatetreasures1: TMenuItem
-        Caption = 'Calculate treasures'
-        OnClick = Calculatetreasures1Click
+      object Calculatelimits: TMenuItem
+        Caption = 'Calculate limits'
+        OnClick = CalculatelimitsClick
       end
       object Searchparam: TMenuItem
         Caption = 'Find parameter...'

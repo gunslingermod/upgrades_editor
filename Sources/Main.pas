@@ -83,7 +83,7 @@ type
     rec41: TMenuItem;
     Clearprogramsregistrysettings1: TMenuItem;
     Help2: TMenuItem;
-    Calculatetreasures1: TMenuItem;
+    Calculatelimits: TMenuItem;
     Searchparam: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -131,7 +131,7 @@ type
     procedure rec41Click(Sender: TObject);
     procedure Clearprogramsregistrysettings1Click(Sender: TObject);
     procedure Help2Click(Sender: TObject);
-    procedure Calculatetreasures1Click(Sender: TObject);
+    procedure CalculatelimitsClick(Sender: TObject);
     procedure SearchparamClick(Sender: TObject);
 
   private
@@ -230,7 +230,7 @@ const
 
 const
   reg_key:string='STCOPGUE1.x';
-  appname:string='Gunslinger'+chr(39)+'s Upgrades Editor 1.03';
+  appname:string='Gunslinger'+chr(39)+'s Upgrades Editor 1.04';
 
 implementation
 
@@ -1596,6 +1596,7 @@ begin
   
   if _selected_index>=0 then begin
     _upgrade_editor.SetUpgrade(_upgrades[_selected_index]);
+    _upgrade_editor.SetUpgradePositionLimits(scheme_rect.Width-5, scheme_rect.Height-5);
     _upgrade_editor.Show();
   end;
 end;
@@ -1733,7 +1734,7 @@ begin
   _help_form.Show();
 end;
 
-procedure TMainForm.Calculatetreasures1Click(Sender: TObject);
+procedure TMainForm.CalculatelimitsClick(Sender: TObject);
 var
   tmpstr:string;
   keyvalue:TMinMaxInfluenceContainer;
